@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Class {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  workItems WorkItem[]
+  importantDates ImportantDate[]
+}
+
+model WorkItem {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  completed   Boolean  @default(false)
+  classId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+model ImportantDate {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  description String?
+  classId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+model Idea {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  time        String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Workout {
+  id        String      @id @default(cuid())
+  type      WorkoutType
+  date      DateTime    @default(now())
+  notes     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  exercises Exercise[]
+}
+
+model Exercise {
+  id        String @id @default(cuid())
+  name      String
+  sets      Int
+  reps      Int
+  weight    Float
+  workoutId String
+  
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+}
+
+model BikeIdea {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BikeEvent {
+  id          String   @id @default(cuid())
+  title       String
+  date        DateTime
+  description String?
+  type        String   // race, trip, service, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum WorkoutType {
+  PUSH
+  PULL
+  LEGS
+}
