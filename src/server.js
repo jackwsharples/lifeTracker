@@ -90,18 +90,24 @@ app.delete("/api/events/:id", async (req, res) => {
 });
 
 // ---- serve the built frontend
+import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "../dist")));
+const distDir = path.join(__dirname, "../dist");
+const indexFile = path.join(distDir, "index.html");
 
-// (optional) health
+// 1) Serve static assets first
+app.use(express.static(distDir));
+
+// 2) Health check for Railway
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Express 5-compatible fallback (no naked '*')
-app.get(/^\/(?!api).*/, (_req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
+// 3) SPA fallback WITHOUT path-to-regexp patterns
+//    (no '*', no regex; just a plain middleware)
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) return next();           // let API routes through
+  if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
+  // If dist isn't present (e.g., dev), just 404 to make it obvious
+  res.status(404).send("index.html not found in /dist");
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server listening on", PORT));
 
