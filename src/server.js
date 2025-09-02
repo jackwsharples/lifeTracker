@@ -1,12 +1,16 @@
+// src/server.js
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 
+// ----- setup
 const prisma = new PrismaClient();
 const app = express();
 app.use(express.json());
 
+// ===================== API ROUTES =====================
 // ---- Classes
 app.get("/api/classes", async (_req, res) => {
   const rows = await prisma.class.findMany({ orderBy: { createdAt: "desc" } });
@@ -89,24 +93,26 @@ app.delete("/api/events/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---- serve the built frontend
-import fs from "fs";
+// ================== HEALTH + STATIC SPA ==================
+app.get("/api/health", (_req, res) => res.status(200).json({ ok: true }));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// IMPORTANT: dist is one level up from /src
 const distDir = path.join(__dirname, "../dist");
 const indexFile = path.join(distDir, "index.html");
 
-// 1) Serve static assets
 app.use(express.static(distDir));
 
-// 2) Health check for Railway
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-// 3) SPA fallback (no wildcards/patterns to avoid path-to-regexp issues)
+// SPA fallback (no wildcards like "/*" to avoid path-to-regexp issues)
 app.use((req, res, next) => {
   if (req.path.startsWith("/api")) return next();
   if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
-  res.status(404).send("index.html not found in /dist");
+  res.status(404).send("index.html not found");
+});
+
+// ======================= START ==========================
+const PORT = Number(process.env.PORT || 3000);
+const HOST = "0.0.0.0";
+app.listen(PORT, HOST, () => {
+  console.log(`[boot] Listening on http://${HOST}:${PORT}`);
 });
