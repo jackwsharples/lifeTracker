@@ -1,77 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Lightbulb, Calendar, Trash2, Bike } from 'lucide-react';
-import { BikeIdea, BikeEvent } from '../../types';
-import { storage } from '../../utils/storage';
-import BikeIdeaModal from './BikeIdeaModal';
-import BikeEventModal from './BikeEventModal';
+// src/components/Bike/BikeView.tsx
+import React, { useEffect, useState } from "react";
+import { Plus, Trash2, Calendar, Bike as BikeIcon } from "lucide-react";
+import { BikeIdea, BikeEvent } from "../../types";
+import { storage } from "../../utils/storage";
+import IdeaModal from "../Ideas/IdeaModal";
+import EventModal from "../Ideas/EventModal";
 
 const BikeView: React.FC = () => {
-  const [bikeIdeas, setBikeIdeas] = useState<BikeIdea[]>([]);
-  const [bikeEvents, setBikeEvents] = useState<BikeEvent[]>([]);
+  const [ideas, setIdeas] = useState<BikeIdea[]>([]);
+  const [events, setEvents] = useState<BikeEvent[]>([]);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
 
+  // initial load
   useEffect(() => {
-    setBikeIdeas(storage.getBikeIdeas());
-    setBikeEvents(storage.getBikeEvents());
+    (async () => {
+      const [i, e] = await Promise.all([
+        storage.getBikeIdeas(),
+        storage.getBikeEvents(),
+      ]);
+      setIdeas(i);
+      setEvents(e);
+    })().catch(console.error);
   }, []);
 
-  const saveBikeIdeas = (newIdeas: BikeIdea[]) => {
-    setBikeIdeas(newIdeas);
-    storage.saveBikeIdeas(newIdeas);
-  };
-
-  const saveBikeEvents = (newEvents: BikeEvent[]) => {
-    setBikeEvents(newEvents);
-    storage.saveBikeEvents(newEvents);
-  };
-
-  const handleAddIdea = (content: string) => {
-    const newIdea: BikeIdea = {
-      id: Date.now().toString(),
-      content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveBikeIdeas([...bikeIdeas, newIdea]);
+  // create handlers
+  const handleAddIdea = async (content: string) => {
+    const created = await storage.addBikeIdea(content);
+    setIdeas((prev) => [created, ...prev]);
     setShowIdeaModal(false);
   };
 
-  const handleAddEvent = (event: Omit<BikeEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newEvent: BikeEvent = {
-      ...event,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveBikeEvents([...bikeEvents, newEvent]);
+  const handleAddEvent = async (
+    evt: Omit<BikeEvent, "id" | "createdAt" | "updatedAt">
+  ) => {
+    const created = await storage.addBikeEvent(evt);
+    setEvents((prev) => [...prev, created]);
     setShowEventModal(false);
   };
 
-  const deleteIdea = (ideaId: string) => {
-    const updatedIdeas = bikeIdeas.filter(idea => idea.id !== ideaId);
-    saveBikeIdeas(updatedIdeas);
+  // delete handlers
+  const deleteIdea = async (id: string) => {
+    await storage.deleteBikeIdea(id);
+    setIdeas((prev) => prev.filter((x) => x.id !== id));
   };
 
-  const deleteEvent = (eventId: string) => {
-    const updatedEvents = bikeEvents.filter(event => event.id !== eventId);
-    saveBikeEvents(updatedEvents);
+  const deleteEvent = async (id: string) => {
+    await storage.deleteBikeEvent(id);
+    setEvents((prev) => prev.filter((x) => x.id !== id));
   };
 
-  const upcomingEvents = bikeEvents
-    .filter(event => new Date(event.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // sort: ideas newest first, events upcoming first
+  const sortedIdeas = [...ideas].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const upcomingEvents = [...events]
+    .filter((e) => new Date(e.date) >= new Date())
+    .sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <BikeIcon className="h-6 w-6 text-gray-800" />
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Bike</h1>
+              <p className="text-sm text-gray-500">
+                Idea board and upcoming bike events
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Bike Ideas Section */}
+          {/* Bike Ideas */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Bike Ideas</h2>
-                <p className="text-sm text-gray-500">Parts, maintenance, goals</p>
+                <h2 className="text-xl font-semibold text-gray-900">Ideas</h2>
+                <p className="text-sm text-gray-500">
+                  Setup tweaks, parts lists, ride plans, training notes
+                </p>
               </div>
               <button
                 onClick={() => setShowIdeaModal(true)}
@@ -83,13 +96,13 @@ const BikeView: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {bikeIdeas.length === 0 ? (
+              {sortedIdeas.length === 0 ? (
                 <div className="text-center py-8">
-                  <Bike className="h-8 w-8 text-gray-300 mx-auto mb-3" />
+                  <BikeIcon className="h-8 w-8 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 text-sm">No bike ideas yet</p>
                 </div>
               ) : (
-                bikeIdeas.map((idea) => (
+                sortedIdeas.map((idea) => (
                   <div
                     key={idea.id}
                     className="group p-4 border border-gray-200 rounded-md hover:shadow-sm transition-all"
@@ -112,12 +125,14 @@ const BikeView: React.FC = () => {
             </div>
           </div>
 
-          {/* Bike Events Section */}
+          {/* Bike Events */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Bike Events</h2>
-                <p className="text-sm text-gray-500">Races, trips, service</p>
+                <h2 className="text-xl font-semibold text-gray-900">Events</h2>
+                <p className="text-sm text-gray-500">
+                  Races, trips, service, maintenance
+                </p>
               </div>
               <button
                 onClick={() => setShowEventModal(true)}
@@ -142,17 +157,19 @@ const BikeView: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-medium text-gray-900">{event.title}</h3>
-                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
-                            {event.type}
+                        <h3 className="font-medium text-gray-900">{event.title}</h3>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-sm text-gray-600">
+                            {new Date(event.date).toLocaleDateString()}
                           </span>
-                        </div>
-                        <div className="text-sm text-gray-600 mb-2">
-                          {new Date(event.date).toLocaleDateString()}
+                          {event.type && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                              {event.type}
+                            </span>
+                          )}
                         </div>
                         {event.description && (
-                          <p className="text-sm text-gray-600">{event.description}</p>
+                          <p className="text-sm text-gray-600 mt-2">{event.description}</p>
                         )}
                       </div>
                       <button
@@ -171,17 +188,10 @@ const BikeView: React.FC = () => {
       </div>
 
       {showIdeaModal && (
-        <BikeIdeaModal
-          onClose={() => setShowIdeaModal(false)}
-          onSave={handleAddIdea}
-        />
+        <IdeaModal onClose={() => setShowIdeaModal(false)} onSave={handleAddIdea} />
       )}
-
       {showEventModal && (
-        <BikeEventModal
-          onClose={() => setShowEventModal(false)}
-          onSave={handleAddEvent}
-        />
+        <EventModal onClose={() => setShowEventModal(false)} onSave={handleAddEvent} />
       )}
     </div>
   );

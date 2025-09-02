@@ -12,50 +12,36 @@ const IdeasView: React.FC = () => {
   const [showEventModal, setShowEventModal] = useState(false);
 
   useEffect(() => {
-    setIdeas(storage.getIdeas());
-    setEvents(storage.getEvents());
+    (async () => {
+      const [ideasData, eventsData] = await Promise.all([
+        storage.getIdeas(),
+        storage.getEvents(),
+      ]);
+      setIdeas(ideasData);
+      setEvents(eventsData);
+    })().catch(console.error);
   }, []);
 
-  const saveIdeas = (newIdeas: Idea[]) => {
-    setIdeas(newIdeas);
-    storage.saveIdeas(newIdeas);
-  };
-
-  const saveEvents = (newEvents: Event[]) => {
-    setEvents(newEvents);
-    storage.saveEvents(newEvents);
-  };
-
-  const handleAddIdea = (content: string) => {
-    const newIdea: Idea = {
-      id: Date.now().toString(),
-      content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveIdeas([...ideas, newIdea]);
+  const handleAddIdea = async (content: string) => {
+    const created = await storage.createIdea(content);
+    setIdeas((prev) => [...prev, created]);
     setShowIdeaModal(false);
   };
 
-  const handleAddEvent = (event: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newEvent: Event = {
-      ...event,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveEvents([...events, newEvent]);
+  const handleAddEvent = async (evt: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const created = await storage.createEvent(evt);
+    setEvents((prev) => [...prev, created]);
     setShowEventModal(false);
   };
 
-  const deleteIdea = (ideaId: string) => {
-    const updatedIdeas = ideas.filter(idea => idea.id !== ideaId);
-    saveIdeas(updatedIdeas);
+  const deleteIdea = async (ideaId: string) => {
+    await storage.deleteIdea(ideaId);
+    setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
   };
 
-  const deleteEvent = (eventId: string) => {
-    const updatedEvents = events.filter(event => event.id !== eventId);
-    saveEvents(updatedEvents);
+  const deleteEvent = async (eventId: string) => {
+    await storage.deleteEvent(eventId);
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
   };
 
   const upcomingEvents = events
@@ -66,7 +52,7 @@ const IdeasView: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Ideas Section */}
+          {/* Ideas */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -112,7 +98,7 @@ const IdeasView: React.FC = () => {
             </div>
           </div>
 
-          {/* Events Section */}
+          {/* Events */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -148,9 +134,7 @@ const IdeasView: React.FC = () => {
                             {new Date(event.date).toLocaleDateString()}
                           </span>
                           {event.time && (
-                            <span className="text-sm text-gray-500">
-                              at {event.time}
-                            </span>
+                            <span className="text-sm text-gray-500">at {event.time}</span>
                           )}
                         </div>
                         {event.description && (
@@ -173,17 +157,10 @@ const IdeasView: React.FC = () => {
       </div>
 
       {showIdeaModal && (
-        <IdeaModal
-          onClose={() => setShowIdeaModal(false)}
-          onSave={handleAddIdea}
-        />
+        <IdeaModal onClose={() => setShowIdeaModal(false)} onSave={handleAddIdea} />
       )}
-
       {showEventModal && (
-        <EventModal
-          onClose={() => setShowEventModal(false)}
-          onSave={handleAddEvent}
-        />
+        <EventModal onClose={() => setShowEventModal(false)} onSave={handleAddEvent} />
       )}
     </div>
   );

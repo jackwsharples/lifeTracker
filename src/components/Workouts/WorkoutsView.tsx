@@ -11,40 +11,30 @@ const WorkoutsView: React.FC = () => {
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    setWorkouts(storage.getWorkouts());
+    (async () => {
+      const data = await storage.getWorkouts();
+      setWorkouts(data);
+    })().catch(console.error);
   }, []);
 
-  const saveWorkouts = (newWorkouts: Workout[]) => {
-    setWorkouts(newWorkouts);
-    storage.saveWorkouts(newWorkouts);
-  };
-
-  const handleAddWorkout = (workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newWorkout: Workout = {
-      ...workout,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveWorkouts([...workouts, newWorkout]);
+  const handleAddWorkout = async (
+    workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>
+  ) => {
+    const created = await storage.addWorkout(workout);
+    setWorkouts((prev) => [created, ...prev]); // newest first
     setShowWorkoutModal(false);
   };
 
   const toggleWorkoutExpansion = (workoutId: string) => {
-    const newExpanded = new Set(expandedWorkouts);
-    if (newExpanded.has(workoutId)) {
-      newExpanded.delete(workoutId);
-    } else {
-      newExpanded.add(workoutId);
-    }
-    setExpandedWorkouts(newExpanded);
+    const next = new Set(expandedWorkouts);
+    next.has(workoutId) ? next.delete(workoutId) : next.add(workoutId);
+    setExpandedWorkouts(next);
   };
 
-  const getWorkoutsForType = (type: 'PUSH' | 'PULL' | 'LEGS') => {
-    return workouts
-      .filter(workout => workout.type === type)
+  const getWorkoutsForType = (type: 'PUSH' | 'PULL' | 'LEGS') =>
+    workouts
+      .filter((w) => w.type === type)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  };
 
   const tabs = [
     { id: 'PUSH' as const, label: 'Push' },
@@ -69,7 +59,6 @@ const WorkoutsView: React.FC = () => {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="border-b border-gray-200">
             <nav className="flex">
@@ -99,7 +88,7 @@ const WorkoutsView: React.FC = () => {
               <div className="space-y-3">
                 {getWorkoutsForType(activeTab).map((workout) => {
                   const isExpanded = expandedWorkouts.has(workout.id);
-                  
+
                   return (
                     <div key={workout.id} className="border border-gray-200 rounded-md">
                       <button
@@ -154,10 +143,7 @@ const WorkoutsView: React.FC = () => {
       </div>
 
       {showWorkoutModal && (
-        <WorkoutModal
-          onClose={() => setShowWorkoutModal(false)}
-          onSave={handleAddWorkout}
-        />
+        <WorkoutModal onClose={() => setShowWorkoutModal(false)} onSave={handleAddWorkout} />
       )}
     </div>
   );

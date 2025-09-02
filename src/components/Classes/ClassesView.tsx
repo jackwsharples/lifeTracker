@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, Trash2, Calendar } from 'lucide-react';
+import { Plus, ArrowRight, Trash2 } from 'lucide-react';
 import { Class, WorkItem, ImportantDate } from '../../types';
 import { storage } from '../../utils/storage';
 import WorkItemModal from './WorkItemModal';
@@ -15,86 +15,92 @@ const ClassesView: React.FC = () => {
   const [showClassModal, setShowClassModal] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
 
+  // initial load
   useEffect(() => {
-    setClasses(storage.getClasses());
-    setWorkItems(storage.getWorkItems());
-    setImportantDates(storage.getImportantDates());
+    (async () => {
+      const [cls, items, dates] = await Promise.all([
+        storage.getClasses(),
+        storage.getWorkItems(),
+        storage.getImportantDates(),
+      ]);
+      setClasses(cls);
+      setWorkItems(items);
+      setImportantDates(dates);
+    })().catch(console.error);
   }, []);
 
-  const saveWorkItems = (newItems: WorkItem[]) => {
-    setWorkItems(newItems);
-    storage.saveWorkItems(newItems);
+  // ------- helpers to refresh only what changed -------
+  const refreshWorkItems = async () => setWorkItems(await storage.getWorkItems());
+  const refreshDates = async () => setImportantDates(await storage.getImportantDates());
+  const refreshClasses = async () => setClasses(await storage.getClasses());
+
+  // ------- create handlers (DB-first, then refresh) -------
+  const handleAddWorkItem = async (item: Omit<WorkItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await storage.createWorkItem(item);
+      await refreshWorkItems();
+      setShowWorkItemModal(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const saveImportantDates = (newDates: ImportantDate[]) => {
-    setImportantDates(newDates);
-    storage.saveImportantDates(newDates);
+  const handleAddImportantDate = async (date: Omit<ImportantDate, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      await storage.createImportantDate(date);
+      await refreshDates();
+      setShowDateModal(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const saveClasses = (newClasses: Class[]) => {
-    setClasses(newClasses);
-    storage.saveClasses(newClasses);
+  const handleAddClass = async (className: string) => {
+    try {
+      await storage.createClass(className);
+      await refreshClasses();
+      setShowClassModal(false);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleAddWorkItem = (item: Omit<WorkItem, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newItem: WorkItem = {
-      ...item,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveWorkItems([...workItems, newItem]);
-    setShowWorkItemModal(false);
+  // ------- update/delete handlers -------
+  const toggleWorkItem = async (itemId: string) => {
+    try {
+      const item = workItems.find(w => w.id === itemId);
+      if (!item) return;
+      await storage.updateWorkItem(itemId, { completed: !item.completed });
+      await refreshWorkItems();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleAddImportantDate = (date: Omit<ImportantDate, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newDate: ImportantDate = {
-      ...date,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveImportantDates([...importantDates, newDate]);
-    setShowDateModal(false);
+  const deleteWorkItem = async (itemId: string) => {
+    try {
+      await storage.deleteWorkItem(itemId);
+      await refreshWorkItems();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleAddClass = (className: string) => {
-    const newClass: Class = {
-      id: Date.now().toString(),
-      name: className,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      workItems: [],
-      importantDates: [],
-    };
-    saveClasses([...classes, newClass]);
-    setShowClassModal(false);
+  const deleteImportantDate = async (dateId: string) => {
+    try {
+      await storage.deleteImportantDate(dateId);
+      await refreshDates();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const toggleWorkItem = (itemId: string) => {
-    const updatedItems = workItems.map(item =>
-      item.id === itemId ? { ...item, completed: !item.completed } : item
-    );
-    saveWorkItems(updatedItems);
-  };
+  // ------- selectors (unchanged) -------
+  const getWorkItemsForClass = (classId: string) =>
+    workItems.filter(item => item.classId === classId);
 
-  const deleteWorkItem = (itemId: string) => {
-    const updatedItems = workItems.filter(item => item.id !== itemId);
-    saveWorkItems(updatedItems);
-  };
-
-  const deleteImportantDate = (dateId: string) => {
-    const updatedDates = importantDates.filter(date => date.id !== dateId);
-    saveImportantDates(updatedDates);
-  };
-
-  const getWorkItemsForClass = (classId: string) => {
-    return workItems.filter(item => item.classId === classId);
-  };
-
-  const getImportantDatesForClass = (classId: string) => {
-    return importantDates.filter(date => date.classId === classId);
-  };
+  const getImportantDatesForClass = (classId: string) =>
+    importantDates.filter(date => date.classId === classId);
 
   return (
     <div className="min-h-screen bg-gray-50">

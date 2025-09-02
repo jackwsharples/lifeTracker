@@ -107,6 +107,8 @@ export const storage = {
     await fetch(`${API}/api/ideas/${id}`, { method: "DELETE" }).then(json);
   },
 
+  
+
   // ---------- EVENTS ----------
   async getEvents(): Promise<Event[]> {
     return fetch(`${API}/api/events`).then(json);
