@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "prisma generate",
+    "prestart": "prisma migrate deploy",
     "start": "node src/server.js"
   },
   "dependencies": {

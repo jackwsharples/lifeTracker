@@ -93,21 +93,20 @@ app.delete("/api/events/:id", async (req, res) => {
 import fs from "fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// IMPORTANT: dist is one level up from /src
 const distDir = path.join(__dirname, "../dist");
 const indexFile = path.join(distDir, "index.html");
 
-// 1) Serve static assets first
+// 1) Serve static assets
 app.use(express.static(distDir));
 
 // 2) Health check for Railway
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// 3) SPA fallback WITHOUT path-to-regexp patterns
-//    (no '*', no regex; just a plain middleware)
+// 3) SPA fallback (no wildcards/patterns to avoid path-to-regexp issues)
 app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) return next();           // let API routes through
+  if (req.path.startsWith("/api")) return next();
   if (fs.existsSync(indexFile)) return res.sendFile(indexFile);
-  // If dist isn't present (e.g., dev), just 404 to make it obvious
   res.status(404).send("index.html not found in /dist");
 });
-
