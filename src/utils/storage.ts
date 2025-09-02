@@ -1,99 +1,136 @@
-import { Class, WorkItem, ImportantDate, Idea, Event, Workout, BikeIdea, BikeEvent } from '../types';
+// src/utils/storage.ts
+// A thin client that talks to your Express/Prisma API instead of localStorage.
+// It preserves the same method names your components already call.
 
-const STORAGE_KEYS = {
-  CLASSES: 'life-tracker-classes',
-  WORK_ITEMS: 'life-tracker-work-items',
-  IMPORTANT_DATES: 'life-tracker-important-dates',
-  IDEAS: 'life-tracker-ideas',
-  EVENTS: 'life-tracker-events',
-  WORKOUTS: 'life-tracker-workouts',
-  BIKE_IDEAS: 'life-tracker-bike-ideas',
-  BIKE_EVENTS: 'life-tracker-bike-events',
+import type {
+  Class,
+  WorkItem,
+  ImportantDate,
+  Idea,
+  Event,
+  Workout,
+  Exercise,
+  BikeIdea,
+  BikeEvent,
+} from "../types";
+
+const json = (r: Response) => {
+  if (!r.ok) throw new Error(`API ${r.status} ${r.statusText}`);
+  return r.json();
 };
 
+// If you ever host API on a different origin in dev, set this via Vite env:
+// import.meta.env.VITE_API_BASE or default to same-origin.
+const API = (import.meta as any).env?.VITE_API_BASE || "";
+
 export const storage = {
-  // Classes
-  getClasses: (): Class[] => {
-    const classes = localStorage.getItem(STORAGE_KEYS.CLASSES);
-    return classes ? JSON.parse(classes) : [
-      { id: '1', name: 'Senior Seminar', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), workItems: [], importantDates: [] },
-      { id: '2', name: 'ClientSide', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), workItems: [], importantDates: [] },
-      { id: '3', name: 'CIS Audit', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), workItems: [], importantDates: [] },
-      { id: '4', name: 'Managing Security', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), workItems: [], importantDates: [] },
-    ];
+  // ---------- CLASSES ----------
+  async getClasses(): Promise<Class[]> {
+    return fetch(`${API}/api/classes`).then(json);
   },
-  
-  saveClasses: (classes: Class[]): void => {
-    localStorage.setItem(STORAGE_KEYS.CLASSES, JSON.stringify(classes));
+  async saveClasses(newClasses: Class[]): Promise<void> {
+    // Not typically used anymore; create individually
+    // Keep for backward compat: no-op
+    return;
   },
-
-  // Work Items
-  getWorkItems: (): WorkItem[] => {
-    const items = localStorage.getItem(STORAGE_KEYS.WORK_ITEMS);
-    return items ? JSON.parse(items) : [];
-  },
-  
-  saveWorkItems: (items: WorkItem[]): void => {
-    localStorage.setItem(STORAGE_KEYS.WORK_ITEMS, JSON.stringify(items));
+  async createClass(name: string): Promise<Class> {
+    return fetch(`${API}/api/classes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }).then(json);
   },
 
-  // Important Dates
-  getImportantDates: (): ImportantDate[] => {
-    const dates = localStorage.getItem(STORAGE_KEYS.IMPORTANT_DATES);
-    return dates ? JSON.parse(dates) : [];
+  // ---------- WORK ITEMS ----------
+  async getWorkItems(): Promise<WorkItem[]> {
+    return fetch(`${API}/api/work-items`).then(json);
   },
-  
-  saveImportantDates: (dates: ImportantDate[]): void => {
-    localStorage.setItem(STORAGE_KEYS.IMPORTANT_DATES, JSON.stringify(dates));
+  async saveWorkItems(_items: WorkItem[]): Promise<void> {
+    // Legacy no-op
+    return;
   },
-
-  // Ideas
-  getIdeas: (): Idea[] => {
-    const ideas = localStorage.getItem(STORAGE_KEYS.IDEAS);
-    return ideas ? JSON.parse(ideas) : [];
+  async createWorkItem(data: Omit<WorkItem, "id" | "createdAt" | "updatedAt">): Promise<WorkItem> {
+    return fetch(`${API}/api/work-items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(json);
   },
-  
-  saveIdeas: (ideas: Idea[]): void => {
-    localStorage.setItem(STORAGE_KEYS.IDEAS, JSON.stringify(ideas));
+  async updateWorkItem(id: string, patch: Partial<WorkItem>): Promise<WorkItem> {
+    return fetch(`${API}/api/work-items/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }).then(json);
   },
-
-  // Events
-  getEvents: (): Event[] => {
-    const events = localStorage.getItem(STORAGE_KEYS.EVENTS);
-    return events ? JSON.parse(events) : [];
-  },
-  
-  saveEvents: (events: Event[]): void => {
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
+  async deleteWorkItem(id: string): Promise<void> {
+    await fetch(`${API}/api/work-items/${id}`, { method: "DELETE" }).then(json);
   },
 
-  // Workouts
-  getWorkouts: (): Workout[] => {
-    const workouts = localStorage.getItem(STORAGE_KEYS.WORKOUTS);
-    return workouts ? JSON.parse(workouts) : [];
+  // ---------- IMPORTANT DATES ----------
+  async getImportantDates(): Promise<ImportantDate[]> {
+    return fetch(`${API}/api/important-dates`).then(json);
   },
-  
-  saveWorkouts: (workouts: Workout[]): void => {
-    localStorage.setItem(STORAGE_KEYS.WORKOUTS, JSON.stringify(workouts));
+  async saveImportantDates(_dates: ImportantDate[]): Promise<void> {
+    // Legacy no-op
+    return;
+  },
+  async createImportantDate(
+    data: Omit<ImportantDate, "id" | "createdAt" | "updatedAt">
+  ): Promise<ImportantDate> {
+    return fetch(`${API}/api/important-dates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(json);
+  },
+  async deleteImportantDate(id: string): Promise<void> {
+    await fetch(`${API}/api/important-dates/${id}`, { method: "DELETE" }).then(json);
   },
 
-  // Bike Ideas
-  getBikeIdeas: (): BikeIdea[] => {
-    const ideas = localStorage.getItem(STORAGE_KEYS.BIKE_IDEAS);
-    return ideas ? JSON.parse(ideas) : [];
+  // ---------- IDEAS ----------
+  async getIdeas(): Promise<Idea[]> {
+    return fetch(`${API}/api/ideas`).then(json);
   },
-  
-  saveBikeIdeas: (ideas: BikeIdea[]): void => {
-    localStorage.setItem(STORAGE_KEYS.BIKE_IDEAS, JSON.stringify(ideas));
+  async saveIdeas(_ideas: Idea[]): Promise<void> {
+    // Legacy no-op
+    return;
+  },
+  async createIdea(content: string): Promise<Idea> {
+    return fetch(`${API}/api/ideas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    }).then(json);
+  },
+  async deleteIdea(id: string): Promise<void> {
+    await fetch(`${API}/api/ideas/${id}`, { method: "DELETE" }).then(json);
   },
 
-  // Bike Events
-  getBikeEvents: (): BikeEvent[] => {
-    const events = localStorage.getItem(STORAGE_KEYS.BIKE_EVENTS);
-    return events ? JSON.parse(events) : [];
+  // ---------- EVENTS ----------
+  async getEvents(): Promise<Event[]> {
+    return fetch(`${API}/api/events`).then(json);
   },
-  
-  saveBikeEvents: (events: BikeEvent[]): void => {
-    localStorage.setItem(STORAGE_KEYS.BIKE_EVENTS, JSON.stringify(events));
+  async saveEvents(_events: Event[]): Promise<void> {
+    // Legacy no-op
+    return;
   },
+  async createEvent(data: Omit<Event, "id" | "createdAt" | "updatedAt">): Promise<Event> {
+    return fetch(`${API}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(json);
+  },
+  async deleteEvent(id: string): Promise<void> {
+    await fetch(`${API}/api/events/${id}`, { method: "DELETE" }).then(json);
+  },
+
+  // ---------- (OPTIONAL) WORKOUTS / BIKE ----------
+  async getWorkouts(): Promise<Workout[]> {
+    // add route if/when you implement it server-side
+    return [];
+  },
+  async getBikeIdeas(): Promise<BikeIdea[]> { return []; },
+  async getBikeEvents(): Promise<BikeEvent[]> { return []; },
 };
