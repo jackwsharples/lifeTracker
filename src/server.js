@@ -93,7 +93,15 @@ app.delete("/api/events/:id", async (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "../dist")));
-app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "../dist/index.html")));
+
+// (optional) health
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Express 5-compatible fallback (no naked '*')
+app.get(/^\/(?!api).*/, (_req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server listening on", PORT));
+
