@@ -138,7 +138,7 @@ const ClassesView: React.FC = () => {
                       {pendingItems.map((item) => (
                         <div
                           key={item.id}
-                          className="group p-3 border border-gray-200 rounded-md hover:shadow-sm transition-all cursor-pointer"
+                          className="group p-3 border border-gray-200 rounded-md bg-red-50 hover:shadow-sm transition-all cursor-pointer"
                           onClick={() => toggleWorkItem(item.id)}
                         >
                           <div className="flex items-center justify-between">
@@ -185,7 +185,7 @@ const ClassesView: React.FC = () => {
                       {completedItems.map((item) => (
                         <div
                           key={item.id}
-                          className="group p-3 border border-gray-200 rounded-md bg-gray-50 hover:shadow-sm transition-all"
+                          className="group p-3 border border-gray-200 rounded-md bg-red-50 hover:shadow-sm transition-all"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500 line-through">{item.title}</span>
