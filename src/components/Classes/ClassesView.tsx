@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, Trash2 } from 'lucide-react';
+import { Plus, ArrowRight, Trash2, Pencil, Check, X } from 'lucide-react';
 import { Class, WorkItem, ImportantDate } from '../../types';
 import { storage } from '../../utils/storage';
 import WorkItemModal from './WorkItemModal';
@@ -14,6 +14,10 @@ const ClassesView: React.FC = () => {
   const [showDateModal, setShowDateModal] = useState(false);
   const [showClassModal, setShowClassModal] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>('');
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [editingDateTitle, setEditingDateTitle] = useState<string>('');
 
   // initial load
   useEffect(() => {
@@ -77,6 +81,30 @@ const ClassesView: React.FC = () => {
     }
   };
 
+  const startEditWorkItem = (itemId: string) => {
+    const item = workItems.find(w => w.id === itemId);
+    if (!item) return;
+    setEditingItemId(itemId);
+    setEditingText(item.title);
+  };
+
+  const cancelEditWorkItem = () => {
+    setEditingItemId(null);
+    setEditingText('');
+  };
+
+  const saveEditWorkItem = async () => {
+    if (!editingItemId) return;
+    try {
+      await storage.updateWorkItem(editingItemId, { title: editingText.trim() });
+      await refreshWorkItems();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      cancelEditWorkItem();
+    }
+  };
+
   const deleteWorkItem = async (itemId: string) => {
     try {
       await storage.deleteWorkItem(itemId);
@@ -92,6 +120,28 @@ const ClassesView: React.FC = () => {
       await refreshDates();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const beginEditDate = (id: string) => {
+    const d = importantDates.find(x => x.id === id);
+    if (!d) return;
+    setEditingDateId(id);
+    setEditingDateTitle(d.title);
+  };
+  const cancelEditDate = () => {
+    setEditingDateId(null);
+    setEditingDateTitle('');
+  };
+  const saveEditDate = async () => {
+    if (!editingDateId) return;
+    try {
+      await storage.updateImportantDate(editingDateId, { title: editingDateTitle.trim() });
+      await refreshDates();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      cancelEditDate();
     }
   };
 
@@ -138,12 +188,45 @@ const ClassesView: React.FC = () => {
                       {pendingItems.map((item) => (
                         <div
                           key={item.id}
-                          className="group p-3 border border-gray-200 rounded-md bg-red-50 hover:shadow-sm transition-all cursor-pointer"
+                          className="group p-3 border border-red-200 rounded-md bg-red-100 hover:shadow-sm transition-all cursor-pointer"
                           onClick={() => toggleWorkItem(item.id)}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-700">{item.title}</span>
+                            {editingItemId === item.id ? (
+                              <div className="flex items-center w-full gap-2" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+                                  value={editingText}
+                                  onChange={(e) => setEditingText(e.target.value)}
+                                  autoFocus
+                                />
+                                <button
+                                  className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700"
+                                  onClick={saveEditWorkItem}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                  className="p-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                                  onClick={cancelEditWorkItem}
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-red-800">{item.title}</span>
+                            )}
                             <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startEditWorkItem(item.id);
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded"
+                                aria-label="Edit"
+                              >
+                                <Pencil className="h-3 w-3 text-gray-500" />
+                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -185,10 +268,10 @@ const ClassesView: React.FC = () => {
                       {completedItems.map((item) => (
                         <div
                           key={item.id}
-                          className="group p-3 border border-gray-200 rounded-md bg-green-50 hover:shadow-sm transition-all"
+                          className="group p-3 border border-green-200 rounded-md bg-green-100 hover:shadow-sm transition-all"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500 line-through">{item.title}</span>
+                            <span className="text-sm text-green-800 line-through">{item.title}</span>
                             <button
                               onClick={() => deleteWorkItem(item.id)}
                               className="p-1 hover:bg-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
@@ -211,18 +294,42 @@ const ClassesView: React.FC = () => {
                           className="group p-3 border border-gray-200 rounded-md hover:shadow-sm transition-all"
                         >
                           <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-sm text-gray-700">{date.title}</span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {new Date(date.date).toLocaleDateString()}
-                              </div>
+                            <div className="flex-1 mr-2">
+                              {editingDateId === date.id ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+                                    value={editingDateTitle}
+                                    onChange={(e) => setEditingDateTitle(e.target.value)}
+                                    autoFocus
+                                  />
+                                  <button className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700" onClick={saveEditDate}>
+                                    <Check className="h-4 w-4" />
+                                  </button>
+                                  <button className="p-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={cancelEditDate}>
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-sm text-gray-700">{date.title}</span>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {new Date(date.date).toLocaleDateString()}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <button
-                              onClick={() => deleteImportantDate(date.id)}
-                              className="p-1 hover:bg-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="h-3 w-3 text-red-400" />
-                            </button>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button className="p-1 hover:bg-gray-100 rounded" onClick={() => beginEditDate(date.id)}>
+                                <Pencil className="h-3 w-3 text-gray-500" />
+                              </button>
+                              <button
+                                onClick={() => deleteImportantDate(date.id)}
+                                className="p-1 hover:bg-red-100 rounded"
+                              >
+                                <Trash2 className="h-3 w-3 text-red-400" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}

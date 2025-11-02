@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Lightbulb, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Lightbulb, Calendar, Trash2, Pencil, Check, X } from 'lucide-react';
 import { Idea, Event } from '../../types';
 import { storage } from '../../utils/storage';
 import IdeaModal from './IdeaModal';
@@ -10,6 +10,8 @@ const IdeasView: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [showIdeaModal, setShowIdeaModal] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -37,6 +39,25 @@ const IdeasView: React.FC = () => {
   const deleteIdea = async (ideaId: string) => {
     await storage.deleteIdea(ideaId);
     setIdeas((prev) => prev.filter((i) => i.id !== ideaId));
+  };
+
+  const beginEdit = (id: string) => {
+    const i = ideas.find(x => x.id === id);
+    if (!i) return;
+    setEditingId(id);
+    setEditingContent(i.content);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingContent('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    const updated = await storage.updateIdea(editingId, { content: editingContent.trim() });
+    setIdeas(prev => prev.map(i => i.id === editingId ? updated : i));
+    cancelEdit();
   };
 
   const deleteEvent = async (eventId: string) => {
@@ -81,7 +102,30 @@ const IdeasView: React.FC = () => {
                     className="group p-4 border border-gray-200 rounded-md hover:shadow-sm transition-all"
                   >
                     <div className="flex items-start justify-between">
-                      <p className="text-sm text-gray-700 flex-1">{idea.content}</p>
+                      {editingId === idea.id ? (
+                        <div className="flex items-center w-full gap-2">
+                          <input
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            autoFocus
+                          />
+                          <button className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700" onClick={saveEdit}>
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button className="p-1.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300" onClick={cancelEdit}>
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-700 flex-1">{idea.content}</p>
+                      )}
+                      <button
+                        onClick={() => beginEdit(idea.id)}
+                        className="p-1 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                      >
+                        <Pencil className="h-3 w-3 text-gray-500" />
+                      </button>
                       <button
                         onClick={() => deleteIdea(idea.id)}
                         className="p-1 hover:bg-red-100 rounded opacity-0 group-hover:opacity-100 transition-opacity ml-2"

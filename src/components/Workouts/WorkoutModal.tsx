@@ -38,6 +38,7 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ onClose, onSave }) => {
 
     const exercisesWithIds: Exercise[] = validExercises.map((exercise, index) => ({
       ...exercise,
+      sets: 1,
       id: `${Date.now()}-${index}`,
       workoutId: '', // Will be set when workout is created
     }));
@@ -121,16 +122,6 @@ const WorkoutModal: React.FC<WorkoutModalProps> = ({ onClose, onSave }) => {
                     />
                   </div>
                   <div className="grid grid-cols-4 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Sets</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={exercise.sets}
-                        onChange={(e) => updateExercise(index, 'sets', parseInt(e.target.value))}
-                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-black focus:border-transparent"
-                      />
-                    </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Reps</label>
                       <input

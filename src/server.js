@@ -57,6 +57,18 @@ app.post("/api/important-dates", async (req, res) => {
   });
   res.json(created);
 });
+app.patch("/api/important-dates/:id", async (req, res) => {
+  const { title, date, description } = req.body;
+  const updated = await prisma.importantDate.update({
+    where: { id: req.params.id },
+    data: {
+      ...(title !== undefined ? { title } : {}),
+      ...(date !== undefined ? { date: new Date(date) } : {}),
+      ...(description !== undefined ? { description } : {}),
+    },
+  });
+  res.json(updated);
+});
 app.delete("/api/important-dates/:id", async (req, res) => {
   await prisma.importantDate.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
@@ -70,6 +82,13 @@ app.get("/api/ideas", async (_req, res) => {
 app.post("/api/ideas", async (req, res) => {
   const created = await prisma.idea.create({ data: { content: req.body.content } });
   res.json(created);
+});
+app.patch("/api/ideas/:id", async (req, res) => {
+  const updated = await prisma.idea.update({
+    where: { id: req.params.id },
+    data: { content: req.body.content },
+  });
+  res.json(updated);
 });
 app.delete("/api/ideas/:id", async (req, res) => {
   await prisma.idea.delete({ where: { id: req.params.id } });
@@ -90,6 +109,89 @@ app.post("/api/events", async (req, res) => {
 });
 app.delete("/api/events/:id", async (req, res) => {
   await prisma.event.delete({ where: { id: req.params.id } });
+  res.json({ ok: true });
+});
+
+// ---- Workouts
+app.get("/api/workouts", async (_req, res) => {
+  const rows = await prisma.workout.findMany({
+    orderBy: { date: "desc" },
+    include: { exercises: true },
+  });
+  res.json(rows);
+});
+app.post("/api/workouts", async (req, res) => {
+  const { type, date, notes, exercises = [] } = req.body;
+  const created = await prisma.workout.create({
+    data: { type, date: new Date(date), notes: notes || null },
+  });
+  if (Array.isArray(exercises) && exercises.length) {
+    await prisma.exercise.createMany({
+      data: exercises.map((e) => ({
+        name: e.name,
+        sets: typeof e.sets === 'number' ? e.sets : 1,
+        reps: Number(e.reps || 0),
+        weight: Number(e.weight || 0),
+        workoutId: created.id,
+      })),
+    });
+  }
+  const full = await prisma.workout.findUnique({
+    where: { id: created.id },
+    include: { exercises: true },
+  });
+  res.json(full);
+});
+
+// ---- Bike
+// Ideas
+app.get("/api/bike/ideas", async (_req, res) => {
+  const rows = await prisma.bikeIdea.findMany({ orderBy: { createdAt: "desc" } });
+  res.json(rows);
+});
+app.post("/api/bike/ideas", async (req, res) => {
+  const created = await prisma.bikeIdea.create({ data: { content: req.body.content } });
+  res.json(created);
+});
+app.patch("/api/bike/ideas/:id", async (req, res) => {
+  const updated = await prisma.bikeIdea.update({
+    where: { id: req.params.id },
+    data: { content: req.body.content },
+  });
+  res.json(updated);
+});
+app.delete("/api/bike/ideas/:id", async (req, res) => {
+  await prisma.bikeIdea.delete({ where: { id: req.params.id } });
+  res.json({ ok: true });
+});
+
+// Events
+app.get("/api/bike/events", async (_req, res) => {
+  const rows = await prisma.bikeEvent.findMany({ orderBy: { date: "asc" } });
+  res.json(rows);
+});
+app.post("/api/bike/events", async (req, res) => {
+  const { title, date, description, type } = req.body;
+  const created = await prisma.bikeEvent.create({
+    data: { title, date: new Date(date), description, type },
+  });
+  res.json(created);
+});
+app.patch("/api/bike/events/:id", async (req, res) => {
+  const { title, date, description, type } = req.body;
+  const updated = await prisma.bikeEvent.update({
+    where: { id: req.params.id },
+    data: {
+      ...(title !== undefined ? { title } : {}),
+      ...(date !== undefined ? { date: new Date(date) } : {}),
+      ...(description !== undefined ? { description } : {}),
+      ...(type !== undefined ? { type } : {}),
+    },
+  });
+  res.json(updated);
+});
+app.delete("/api/bike/events/:id", async (req, res) => {
+  await prisma.bikeEvent.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
 });
 

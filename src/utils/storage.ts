@@ -84,6 +84,13 @@ export const storage = {
       body: JSON.stringify(data),
     }).then(json);
   },
+  async updateImportantDate(id: string, patch: Partial<ImportantDate>): Promise<ImportantDate> {
+    return fetch(`${API}/api/important-dates/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }).then(json);
+  },
   async deleteImportantDate(id: string): Promise<void> {
     await fetch(`${API}/api/important-dates/${id}`, { method: "DELETE" }).then(json);
   },
@@ -101,6 +108,13 @@ export const storage = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content }),
+    }).then(json);
+  },
+  async updateIdea(id: string, patch: Partial<Idea>): Promise<Idea> {
+    return fetch(`${API}/api/ideas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
     }).then(json);
   },
   async deleteIdea(id: string): Promise<void> {
@@ -128,11 +142,58 @@ export const storage = {
     await fetch(`${API}/api/events/${id}`, { method: "DELETE" }).then(json);
   },
 
-  // ---------- (OPTIONAL) WORKOUTS / BIKE ----------
+  // ---------- WORKOUTS ----------
   async getWorkouts(): Promise<Workout[]> {
-    // add route if/when you implement it server-side
-    return [];
+    return fetch(`${API}/api/workouts`).then(json);
   },
-  async getBikeIdeas(): Promise<BikeIdea[]> { return []; },
-  async getBikeEvents(): Promise<BikeEvent[]> { return []; },
+  async addWorkout(data: Omit<Workout, "id" | "createdAt" | "updatedAt">): Promise<Workout> {
+    return fetch(`${API}/api/workouts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(json);
+  },
+
+  // ---------- BIKE ----------
+  async getBikeIdeas(): Promise<BikeIdea[]> {
+    return fetch(`${API}/api/bike/ideas`).then(json);
+  },
+  async addBikeIdea(content: string): Promise<BikeIdea> {
+    return fetch(`${API}/api/bike/ideas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    }).then(json);
+  },
+  async updateBikeIdea(id: string, patch: Partial<BikeIdea>): Promise<BikeIdea> {
+    return fetch(`${API}/api/bike/ideas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }).then(json);
+  },
+  async deleteBikeIdea(id: string): Promise<void> {
+    await fetch(`${API}/api/bike/ideas/${id}`, { method: "DELETE" }).then(json);
+  },
+
+  async getBikeEvents(): Promise<BikeEvent[]> {
+    return fetch(`${API}/api/bike/events`).then(json);
+  },
+  async addBikeEvent(data: Omit<BikeEvent, "id" | "createdAt" | "updatedAt">): Promise<BikeEvent> {
+    return fetch(`${API}/api/bike/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then(json);
+  },
+  async updateBikeEvent(id: string, patch: Partial<BikeEvent>): Promise<BikeEvent> {
+    return fetch(`${API}/api/bike/events/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }).then(json);
+  },
+  async deleteBikeEvent(id: string): Promise<void> {
+    await fetch(`${API}/api/bike/events/${id}`, { method: "DELETE" }).then(json);
+  },
 };
