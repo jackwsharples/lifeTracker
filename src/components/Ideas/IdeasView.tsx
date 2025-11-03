@@ -103,7 +103,12 @@ const IdeasView: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       {editingId === idea.id ? (
-                        <div className="flex items-center w-full gap-2">
+                        <div
+                          className="flex items-center w-full gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                        >
                           <input
                             className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-black focus:border-transparent"
                             value={editingContent}

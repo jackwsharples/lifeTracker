@@ -1,3 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* iOS standalone PWA scroll momentum helper */
+.ios-momentum { -webkit-overflow-scrolling: touch; }
